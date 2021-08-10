@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -27,6 +28,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     UserDetailsService userDetailsService;
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+
+        // 인가 정책
+        // 어떤 요청에도 인증을 받아야 자원에 접근이 가능하다
         http
                 .authorizeRequests()
                 .anyRequest().authenticated();
@@ -101,5 +105,35 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .alwaysRemember(false)
                 .userDetailsService(userDetailsService)
                 ;
+
+        http
+                .sessionManagement()
+                // 동시 세션 제어
+                // 최대 동시 접근 세션 수를 1로 설정
+                .maximumSessions(1)
+                // 최대 세션수를 초과하였을때 서버에서의 처리
+                // false : (defalut) 이전 세션을 만료시킨다
+                // true : 새로운 세션의 접근을 막는다
+                .maxSessionsPreventsLogin(false)
+                // 세션이 만료된 경우 이동할 주소 지정
+                .expiredUrl("/")
+                .and()
+
+                // 세션 고정 보호 설정
+                // defalut 로 changeSessionId() 가 설정되어있다.
+                // -> 새로운 인증마다 session id를 변경해준다.
+                .sessionFixation().changeSessionId()
+                .and()
+
+                // 세션 정책 설정
+                // defalut로는 .If_required 로 설정되어있다.
+                // -> 필요시에 세션을 새로 생성한다.
+                .sessionManagement()
+                // SessionCreationPolicy.STATELESS
+                // : 세션을 생성하지도, 사용하지도 않음 -> JWT 기반 인증 방식을 사용할때 적용한다.
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                ;
+        
+
     }
 }
