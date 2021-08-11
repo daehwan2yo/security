@@ -2,6 +2,8 @@ package io.security.basic;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -9,10 +11,15 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.savedrequest.SavedRequest;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -26,6 +33,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     UserDetailsService userDetailsService;
+
+    // Spring Security 에서 자체적으로 계정과 권한을 생성
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception{
+        auth.inMemoryAuthentication().withUser("user").password("{noop}1234").roles("USER");
+        auth.inMemoryAuthentication().withUser("admin").password("{noop}1234").roles("ADMIN");
+        auth.inMemoryAuthentication().withUser("sys").password("{noop}1234").roles("SYS");
+    }
+
     @Override
     protected void configure(HttpSecurity http) throws Exception {
 
@@ -33,6 +49,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         // 어떤 요청에도 인증을 받아야 자원에 접근이 가능하다
         http
                 .authorizeRequests()
+                .antMatchers("/user").hasRole("USER")
+                .antMatchers("/admin/pay").hasAuthority("ROLE_ADMIN")
+                .antMatchers("/admin/**").hasAnyRole("ADMIN","SYS")
+                .antMatchers("/sys/**").access("hasRole('ADMIN') or hasRole('SYS')")
                 .anyRequest().authenticated();
 
         http
@@ -50,11 +70,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .passwordParameter("userPw")
                 // front에서 사용하는 action 변수명을 설정한다.
                 .loginProcessingUrl("/login_proc")
+
+                // 사용자가 로그인에 실패했다가 재 성공했을때도 이전에 요청을 그대로 유지하면서 페이지로 이동하게 만든다.
                 .successHandler(new AuthenticationSuccessHandler() {
                     @Override
                     public void onAuthenticationSuccess(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Authentication authentication) throws IOException, ServletException {
-                        System.out.println("authentication : "+ authentication.getName());
-                        httpServletResponse.sendRedirect("/");
+                        RequestCache requestCache = new HttpSessionRequestCache();
+                        SavedRequest savedRequest = requestCache.getRequest(httpServletRequest,httpServletResponse);
+                        String redirectUrl = savedRequest.getRedirectUrl();
+                        httpServletResponse.sendRedirect(redirectUrl);
                     }
                 })
                 .failureHandler(new AuthenticationFailureHandler() {
@@ -133,7 +157,29 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // : 세션을 생성하지도, 사용하지도 않음 -> JWT 기반 인증 방식을 사용할때 적용한다.
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 ;
-        
 
+        /**
+         *  인증, 인가 예외처리
+         */
+        http
+                .exceptionHandling()
+
+                // 인증 예외가 났을때, login 페이지로 이동하게 만든다.
+                .authenticationEntryPoint(new AuthenticationEntryPoint() {
+                    @Override
+                    public void commence(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, AuthenticationException e) throws IOException, ServletException {
+                        httpServletResponse.sendRedirect("/login");
+                    }
+                })
+
+                // 인가 예외가 났을때, denied 페이지로 이동하게 만든다.
+                .accessDeniedHandler(new AccessDeniedHandler() {
+                    @Override
+                    public void handle(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, AccessDeniedException e) throws IOException, ServletException {
+                        httpServletResponse.sendRedirect("/denied");
+                    }
+                });
+        http
+                .csrf();
     }
 }
