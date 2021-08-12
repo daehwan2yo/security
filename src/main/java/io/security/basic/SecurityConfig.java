@@ -11,6 +11,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
@@ -34,12 +35,19 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     UserDetailsService userDetailsService;
 
+    @Autowired
+    PasswordEncoder passwordEncoder;
+
     // Spring Security 에서 자체적으로 계정과 권한을 생성
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception{
-        auth.inMemoryAuthentication().withUser("user").password("{noop}1234").roles("USER");
-        auth.inMemoryAuthentication().withUser("admin").password("{noop}1234").roles("ADMIN");
-        auth.inMemoryAuthentication().withUser("sys").password("{noop}1234").roles("SYS");
+
+        // 계정의 비밀번호를 암호화 시켜준다.
+        String password = passwordEncoder.encode("1234");
+
+        auth.inMemoryAuthentication().withUser("user").password(password).roles("USER");
+        auth.inMemoryAuthentication().withUser("admin").password(password).roles("ADMIN");
+        auth.inMemoryAuthentication().withUser("sys").password(password).roles("SYS");
     }
 
     @Override
