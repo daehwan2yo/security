@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
@@ -34,14 +35,14 @@ import java.io.IOException;
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
-    UserDetailsService userDetailsService;
+    private UserDetailsService userDetailsService;
+    @Autowired
+    private AuthenticationProvider authenticationProvider;
 
-    // Spring Security 에서 자체적으로 계정과 권한을 생성
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception{
-        auth.inMemoryAuthentication().withUser("user").password("{noop}1234").roles("USER");
-        auth.inMemoryAuthentication().withUser("admin").password("{noop}1234").roles("ADMIN");
-        auth.inMemoryAuthentication().withUser("sys").password("{noop}1234").roles("SYS");
+        auth
+            .authenticationProvider(authenticationProvider);
     }
 
     // web ignoring 설정
