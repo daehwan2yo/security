@@ -48,7 +48,7 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
 
         // 해당 라인까지 왔다면 모든 인증절차를 거쳤다는 의미이다.
         UsernamePasswordAuthenticationToken authenticationToken
-                = new UsernamePasswordAuthenticationToken(accountContext.getAccount().getPassword(),
+                = new UsernamePasswordAuthenticationToken(accountContext.getAccount(),
                                                             null,
                                                             accountContext.getAuthorities());
 

@@ -39,7 +39,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private AuthenticationProvider authenticationProvider;
     @Autowired
     private AuthenticationDetailsSource authenticationDetailsSource;
-
+    @Autowired
+    private AuthenticationSuccessHandler authenticationSuccessHandler;
+    @Autowired
+    private AuthenticationFailureHandler authenticationFailureHandler;
+    @Autowired
+    private AccessDeniedHandler accessDeniedHandler;
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception{
@@ -61,7 +66,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http
                 .authorizeRequests()
-                .antMatchers("/","/users").permitAll()
+                // 로그인 실패시 이동할 denied 페이지로의 권한은 없어야함
+                .antMatchers("/","/users","/login*").permitAll()
                 .antMatchers("/mypage").hasRole("USER")
                 .antMatchers("/messages").hasRole("MANAGER")
                 .antMatchers("/config").hasRole("ADMIN")
@@ -73,6 +79,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .loginProcessingUrl("/login_proc")
                 .defaultSuccessUrl("/")
                 .authenticationDetailsSource(authenticationDetailsSource)
+                .successHandler(authenticationSuccessHandler)
+                .failureHandler(authenticationFailureHandler)
                 .permitAll()
                 ;
 
@@ -81,5 +89,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .maximumSessions(2)
                 .maxSessionsPreventsLogin(false)
                 ;
+        http
+                .exceptionHandling()
+                .accessDeniedHandler(accessDeniedHandler);
     }
 }
