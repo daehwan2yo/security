@@ -53,12 +53,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private AccessDeniedHandler accessDeniedHandler;
 
 
-    @Bean
-    public AjaxLoginProcessingFilter ajaxLoginProcessingFilter() throws Exception {
-        AjaxLoginProcessingFilter ajaxLoginProcessingFilter = new AjaxLoginProcessingFilter();
-        ajaxLoginProcessingFilter.setAuthenticationManager(authenticationManager());
-        return ajaxLoginProcessingFilter;
-    }
+
 
     @Override
     protected AuthenticationManager authenticationManager() throws Exception {
@@ -93,9 +88,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/config").hasRole("ADMIN")
                 .anyRequest().authenticated()
                 .and()
-
-                .addFilterBefore(ajaxLoginProcessingFilter(), UsernamePasswordAuthenticationFilter.class)
-                .csrf().disable()
 
                 .formLogin()
                 .loginPage("/login")
