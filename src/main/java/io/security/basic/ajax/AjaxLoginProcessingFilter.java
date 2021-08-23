@@ -22,11 +22,11 @@ public class AjaxLoginProcessingFilter extends AbstractAuthenticationProcessingF
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws AuthenticationException, IOException, ServletException {
-        ObjectMapper obejctMapper = new ObjectMapper();
+        ObjectMapper objectMapper = new ObjectMapper();
         if(!isAjax(httpServletRequest))
             throw new IllegalStateException("Authentication is not supported");
 
-        AccountDto accountDto = obejctMapper.readValue(httpServletRequest.getReader(),AccountDto.class);
+        AccountDto accountDto = objectMapper.readValue(httpServletRequest.getReader(),AccountDto.class);
 
         if(accountDto.getUsername() == null || accountDto.getPassword()==null)
             throw new IllegalStateException("ID or Password is empty");

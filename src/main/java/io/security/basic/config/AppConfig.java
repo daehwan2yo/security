@@ -1,5 +1,6 @@
 package io.security.basic.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.security.basic.Authenticate.CustomAuthenticationProvider;
 import io.security.basic.Authenticate.CustomUserDetailsService;
 import org.modelmapper.ModelMapper;
@@ -34,5 +35,10 @@ public class AppConfig {
     @Bean
     public AuthenticationProvider authenticationProvider(){
         return new CustomAuthenticationProvider();
+    }
+
+    @Bean
+    public ObjectMapper objectMapper(){
+        return new ObjectMapper();
     }
 }
