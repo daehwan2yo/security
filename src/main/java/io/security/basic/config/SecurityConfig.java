@@ -1,9 +1,11 @@
 package io.security.basic.config;
 
+import io.security.basic.Authorize.PermitAllFilter;
 import io.security.basic.Authorize.SecurityResourceService;
 import io.security.basic.Authorize.UrlFilterInvocationSecurityMetadataSource;
 import io.security.basic.Authorize.UrlResourceMapFactoryBean;
 import io.security.basic.ajax.AjaxLoginProcessingFilter;
+import io.security.basic.roleHierarchy.RoleHierarchyServiceImpl;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
@@ -14,7 +16,9 @@ import org.springframework.security.access.AccessDecisionManager;
 import org.springframework.security.access.AccessDecisionVoter;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.ConfigAttribute;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.access.vote.AffirmativeBased;
+import org.springframework.security.access.vote.RoleHierarchyVoter;
 import org.springframework.security.access.vote.RoleVoter;
 import org.springframework.security.authentication.AuthenticationDetailsSource;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -48,6 +52,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -67,7 +72,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private AuthenticationFailureHandler authenticationFailureHandler;
     @Autowired
     private AccessDeniedHandler accessDeniedHandler;
-
+    // 인가 처리가 필요없는 자원
+    // PermitAllFilter의 생성자로 전달한다.
+    private String[] permitAllResources = {"/","/login","/user/login/**"};
 
 
     @Override
@@ -128,19 +135,27 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     // Custom 인가 Filter
     @Bean
-    public FilterSecurityInterceptor customFilterSecurityInterceptor() throws Exception {
-        FilterSecurityInterceptor filterSecurityInterceptor = new FilterSecurityInterceptor();
+    public PermitAllFilter customFilterSecurityInterceptor() throws Exception {
+
+        // permitAll 을 해줄 자원을 넘겨줘야한다.
+        PermitAllFilter permitAllFilter = new PermitAllFilter(permitAllResources);
         // securityMetadataSource 설정
         // -> 해당 객체로 DB로부터 자원요소와 권한 요소를 불러온다.
-        filterSecurityInterceptor.setSecurityMetadataSource(urlFilterInvocationSecurityMetadataSource());
+        permitAllFilter.setSecurityMetadataSource(urlFilterInvocationSecurityMetadataSource());
         // AuthenticationManager 설정
-        filterSecurityInterceptor.setAuthenticationManager(authenticationManager());
+        permitAllFilter.setAuthenticationManager(authenticationManager());
 
         // 위 두 구문을 통해 3요소를 불러온후 처리를 담당할 AccessDecisionManager 설정
-        filterSecurityInterceptor.setAccessDecisionManager(affirmativeBased());
+        permitAllFilter.setAccessDecisionManager(affirmativeBased());
 
-        return filterSecurityInterceptor;
+        return permitAllFilter;
     }
+
+    @Bean
+    public RoleHierarchyImpl roleHierarchyImpl(){
+        return new RoleHierarchyImpl();
+    }
+
 
     private FilterInvocationSecurityMetadataSource urlFilterInvocationSecurityMetadataSource() throws Exception{
         // urlFilterInvocationSecurityMetadataSource 에 DB의 자원, 권한 Map 정보를 전달해준다.
@@ -155,6 +170,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return new AffirmativeBased(getAccessDecisionVoters());
     }
     private List<AccessDecisionVoter<?>> getAccessDecisionVoters(){
-        return Arrays.asList(new RoleVoter());
+
+        List<AccessDecisionVoter<? extends Object>> accessDecisionVoterList = new ArrayList<>();
+        accessDecisionVoterList.add(roleVoter());
+
+
+        return accessDecisionVoterList;
+    }
+
+    private AccessDecisionVoter<? extends Object> roleVoter() {
+        RoleHierarchyVoter roleHierarchyVoter = new RoleHierarchyVoter(roleHierarchyImpl());
+        return roleHierarchyVoter;
     }
 }
