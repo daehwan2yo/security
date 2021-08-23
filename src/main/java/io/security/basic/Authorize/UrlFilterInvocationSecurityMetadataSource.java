@@ -11,8 +11,11 @@ import java.util.*;
 
 public class UrlFilterInvocationSecurityMetadataSource implements FilterInvocationSecurityMetadataSource {
 
-    private LinkedHashMap<RequestMatcher,List<ConfigAttribute>> requestMap = new LinkedHashMap<>();
+    private LinkedHashMap<RequestMatcher,List<ConfigAttribute>> requestMap ;
 
+    public UrlFilterInvocationSecurityMetadataSource(LinkedHashMap<RequestMatcher,List<ConfigAttribute>> resourceMap){
+        this.requestMap = resourceMap;
+    }
     @Override
     public Collection<ConfigAttribute> getAttributes(Object o) throws IllegalArgumentException {
         // SecurityMetadataSource interface를 상속받아 사용하고, 해당 interface는 url 방식 뿐아니라 method 방식도 지원하므로,
@@ -20,8 +23,13 @@ public class UrlFilterInvocationSecurityMetadataSource implements FilterInvocati
         HttpServletRequest request = ((FilterInvocation)o).getRequest();
 
         if(request!=null)
-            for(Map.Entry<RequestMatcher,List<ConfigAttribute>> entry : )
+            for(Map.Entry<RequestMatcher,List<ConfigAttribute>> entry : requestMap.entrySet()){
+                RequestMatcher matcher = entry.getKey();
+                if(matcher.matches(request))
+                    return entry.getValue();
+            }
 
+        return null;
     }
 
     @Override
